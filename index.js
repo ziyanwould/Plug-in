@@ -165,3 +165,159 @@ with(plugin){
     console.log(div(2,1))
     console.log(sur(2,1))
 }
+
+/**
+ * 
+ * 插件的API
+插件的默认参数
+我们知道，函数是可以设置默认参数这种说法，而不管我们是否传有参数，我们都应该返回一个值以告诉用户我做了怎样的处理，比如：
+
+function add(param){
+    var args = !!param ? Array.prototype.slice.call(arguments) : [];
+    return args.reduce(function(pre,cur){
+        return pre + cur;
+    }, 0);
+}
+
+console.log(add()) //不传参，结果输出0，则这里已经设置了默认了参数为空数组
+console.log(add(1,2,3,4,5)) //传参，结果输出15
+则作为一个健壮的js插件，我们应该把一些基本的状态参数添加到我们需要的插件上去。
+假设还是上面的加减乘除余的需求，我们如何实现插件的默认参数呢？道理其实是一样的。
+
+
+ */ 
+;(function(undefined){
+    "use strict"
+     var _global;
+
+     function result(args,fn){
+         /**
+          * 所以整个过程我们基本就可以分2步进行理解了
+
+            Array.prototype.slice.call(arguments)
+            理解第一步:  其中，arguments是一个具有length属性的对象, 通过call 这个方法，把arguments 指向了Array.prototype.slice方法的作用域，
+            也就是说通过call方法，让Array.prototype.slice对arguments对象进行操作
+
+            理解第二步:  Array.prototype.slice就是对该对象使用Array类的slice方法。但是呢arguments它又不是个Array对象
+                    */
+
+         var argsArr = Array.prototype.slice.call(args); //将函数的实际参数转换成数组的方法
+         if(argsArr.length>0){
+             return argsArr.reduce(fn);
+         } else {
+             return 0;
+         }
+     }
+
+     var plugin = {
+         add:function(){
+             return result(arguments,function(pre,cur){
+                 return  pre + cur
+             })
+         },
+         sub:function(){
+             return result(arguments,function(pre,cur){
+                 return pre -cur
+             })
+         },
+         mul:function(){
+             return result(arguments,function(pre,cur){
+                 return pre * cur;
+             })
+         },
+         div:function(){
+             return result(arguments,function(pre,cur){
+                 return pre / cur;
+             })
+         },
+         sur:function(){
+             return result(arguments,function(pre,cur){
+                 return pre % cur;
+             })
+         }
+     }
+
+     //最后将全局插件对象暴露给全局对象
+     _global = (function(){ return this || (0,eval)('this');}());
+     if (typeof module !== "undefined" && module.exports){
+         module.exports = plugin;
+     } else if (typeof define === "function" && define.amd){
+         define(function(){return plugin;});
+     }else{
+         !('plugin' in _global) && (_global.plugin = plugin);
+     }
+}());
+
+// 输出结果为：
+with(plugin){
+    console.log(add()); // 0
+    console.log(sub()); // 0
+    console.log(mul()); // 0
+    console.log(div()); // 0
+    console.log(sur()); // 0
+
+    console.log(add(2,1)); // 3
+    console.log(sub(2,1)); // 1
+    console.log(mul(2,1)); // 2
+    console.log(div(2,1)); // 2
+    console.log(sur(2,1)); // 0
+}
+
+//实际上，插件都有自己的默认参数，
+
+
+
+
+/*
+JavaScript中，万物皆对象，所有对象都是继承自原型。JS在创建对象（不论是普通对象还是函数对象）的时候，都有一个叫做__proto__的内置属性，用于指向创建它的函数对象的原型对象prototype。
+关于原型问题，感兴趣的同学可以看这篇：js原型链
+在上面的需求中，我们可以将plugin对象改为原型的方式，则需要将plugin写成一个构造方法，我们将插件名换为Calculate避免因为Plugin大写的时候与Window对象中的API冲突。
+*/ 
+
+//假设我们的插件是对初始化参数进行运算并只输出结果，我们可以稍微改一下：
+
+// plugin.js
+// plugin.js
+;(function(undefined) {
+    "use strict"
+    var _global;
+
+    function result(args,type){
+        var argsArr = Array.prototype.slice.call(args);
+        if(argsArr.length == 0) return 0;
+        switch(type) {
+            case 1: return argsArr.reduce(function(p,c){return p + c;});
+            case 2: return argsArr.reduce(function(p,c){return p - c;});
+            case 3: return argsArr.reduce(function(p,c){return p * c;});
+            case 4: return argsArr.reduce(function(p,c){return p / c;});
+            case 5: return argsArr.reduce(function(p,c){return p % c;});
+            default: return 0;
+        }
+    }
+
+    function Calculate(){}
+    Calculate.prototype.add = function(){console.log(result(arguments,1));return this;}
+    Calculate.prototype.sub = function(){console.log(result(arguments,2));return this;}
+    Calculate.prototype.mul = function(){console.log(result(arguments,3));return this;}
+    Calculate.prototype.div = function(){console.log(result(arguments,4));return this;}
+    Calculate.prototype.sur = function(){console.log(result(arguments,5));return this;}
+
+
+    // 最后将插件对象暴露给全局对象
+    _global = (function(){ return this || (0, eval)('this'); }());
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = Calculate;
+    } else if (typeof define === "function" && define.amd) {
+        define(function(){return Calculate;});
+    } else {
+        !('Calculate' in _global) && (_global.Calculate = Calculate);
+    }
+}());
+
+var plugin = new Calculate();
+plugin
+    .add(2,1)
+    .sub(2,1)
+    .mul(2,1)
+    .div(2,1)
+    .sur(2,1);
